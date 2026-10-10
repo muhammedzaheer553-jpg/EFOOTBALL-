@@ -7,6 +7,18 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#03080f;color:#eaf2f8;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;overflow-x:hidden}
+
+/* eFootball Opening Transmission Modal */
+#introOverlay{position:fixed;inset:0;background:radial-gradient(circle at center, #0a253c 0%, #03080f 85%);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.6s ease;padding:20px;text-align:center}
+#introOverlay.fade-out{opacity:0;pointer-events:none}
+.intro-badge{font-size:55px;margin-bottom:10px;animation:pulseBadge 2s infinite ease-in-out}
+@keyframes pulseBadge{0%,100%{transform:scale(1);filter:drop-shadow(0 0 10px rgba(0,240,255,0.4))}50%{transform:scale(1.08);filter:drop-shadow(0 0 25px rgba(0,240,255,0.8))}}
+.intro-title{font-size:clamp(28px,6vw,48px);color:#00f0ff;font-weight:900;letter-spacing:6px;text-shadow:0 0 20px rgba(0,240,255,0.6);margin:0}
+.intro-subtitle{color:#8ab4f8;font-size:12px;letter-spacing:5px;margin:10px 0 25px;text-transform:uppercase}
+.intro-matchup{font-size:clamp(16px,3vw,22px);color:#ffe600;font-weight:bold;margin-bottom:30px;letter-spacing:2px}
+.enter-btn{background:linear-gradient(135deg,#00f0ff,#0088ff);color:#030b14;border:0;padding:16px 40px;font-size:16px;font-weight:900;border-radius:30px;cursor:pointer;letter-spacing:3px;box-shadow:0 0 30px rgba(0,240,255,0.5);transition:all 0.2s}
+.enter-btn:hover{transform:scale(1.05);box-shadow:0 0 45px rgba(0,240,255,0.8)}
+
 header{text-align:center;padding:14px;background:linear-gradient(135deg,#051628,#020b14);border-bottom:2px solid #00f0ff;box-shadow:0 0 25px rgba(0,240,255,0.25)}
 h1{color:#00f0ff;margin:0;font-size:clamp(22px,4vw,36px);letter-spacing:4px;text-shadow:0 0 15px rgba(0,240,255,0.6)}
 header p{color:#8ab4f8;font-size:10px;letter-spacing:4px;margin-top:4px;text-transform:uppercase}
@@ -56,6 +68,16 @@ footer{text-align:center;color:#4a6d96;font-size:10px;padding:20px;letter-spacin
 </style>
 </head>
 <body>
+
+<!-- eFootball Opening Transmission Modal -->
+<div id="introOverlay">
+  <div class="intro-badge">⚽🏆</div>
+  <h1 class="intro-title">eFOOTBALL 27</h1>
+  <div class="intro-subtitle">Official Matchday Transmission</div>
+  <div class="intro-matchup" id="introMatchup">FC Barcelona vs Real Madrid</div>
+  <button class="enter-btn" id="enterMatchBtn">▶ ENTER STADIUM</button>
+</div>
+
 <header>
   <h1>⚽ eFOOTBALL 27</h1>
   <p>PRO MATCHDAY · PENALTY SHOOTOUT</p>
@@ -147,6 +169,92 @@ footer{text-align:center;color:#4a6d96;font-size:10px;padding:20px;letter-spacin
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js';
 
 const $ = id => document.getElementById(id);
+
+// Web Audio API Sound Synthesizer for eFootball Music & SFX
+let audioCtx = null;
+let musicInterval = null;
+
+function initAudio(){
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if(audioCtx.state === 'suspended'){
+    audioCtx.resume();
+  }
+}
+
+function playAmbientMusic(){
+  if(musicInterval) return;
+  // Atmospheric stadium synth chord loop
+  const chords = [[130.81, 196.00], [146.83, 220.00], [110.00, 164.81], [98.00, 146.83]];
+  let index = 0;
+  
+  musicInterval = setInterval(()=>{
+    if(!audioCtx) return;
+    try {
+      const now = audioCtx.currentTime;
+      const osc1 = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc1.type = 'sine';
+      osc2.type = 'triangle';
+      osc1.frequency.setValueAtTime(chords[index][0], now);
+      osc2.frequency.setValueAtTime(chords[index][1], now);
+
+      gain.gain.setValueAtTime(0.015, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.8);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 4);
+      osc2.stop(now + 4);
+
+      index = (index + 1) % chords.length;
+    } catch(e){}
+  }, 4000);
+}
+
+function playSound(type){
+  if(!audioCtx) return;
+  try {
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if(type === 'whistle'){
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(2400, now);
+      osc.frequency.linearRampToValueAtTime(2700, now + 0.15);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else if(type === 'goal'){
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(450, now + 0.3);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    } else if(type === 'save'){
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(120, now);
+      osc.frequency.linearRampToValueAtTime(60, now + 0.25);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    }
+  } catch(e){}
+}
 
 const rosters = {
  "FC Barcelona":["Robert Lewandowski","Lamine Yamal","Raphinha","Pedri","Gavi","Frenkie de Jong","Ferran Torres","Dani Olmo","Ronald Araújo","Jules Koundé"],
@@ -266,7 +374,6 @@ function makeStadium(){
  mainLight.shadow.camera.bottom=-16;
  scene.add(mainLight);
 
- // Stadium Neon Floodlights
  const neon1=new THREE.PointLight(0x00f0ff,4,45);
  neon1.position.set(-14,18,-10);
  scene.add(neon1);
@@ -275,7 +382,6 @@ function makeStadium(){
  neon2.position.set(14,18,-10);
  scene.add(neon2);
 
- // Pitch Grass
  const pitchMat=makeMaterial(0x125227,0.8);
  box(scene,40,0.1,55,pitchMat,0,-0.06,-8);
 
@@ -293,7 +399,6 @@ function makeStadium(){
  drawLine([[-3.66,0.02,-12],[3.66,0.02,-12],[3.66,0.02,-7.5],[-3.66,0.02,-7.5],[-3.66,0.02,-12]]);
  drawLine([[0,0.02,1.5],[0,0.02,2.5]]);
 
- // Stadium Stands & Glowing Spectator LED blocks
  for(const side of [-1,1]){
   box(scene,10,7,42,makeMaterial(0x101c2b,0.7),side*20,3.5,-8);
   for(let row=0;row<6;row++){
@@ -305,7 +410,6 @@ function makeStadium(){
   }
  }
 
- // Goal Frame & High-Definition Netting
  const postMat=makeMaterial(0xfcfcfc,0.2,0.8);
  const postR=0.07;
  cylinder(scene,postR,postR,2.44,postMat,-3.66,1.22,-12);
@@ -363,7 +467,6 @@ function animate(){
    keeper.rotation.z=(shotResult.diveX>0?-0.65:0.65)*Math.min(1,t*1.9);
   }
 
-  // Camera Shake on strike
   if(t<0.2){
    camera.position.x=(Math.random()-0.5)*0.06;
    camera.position.y=4.0+(Math.random()-0.5)*0.06;
@@ -399,6 +502,7 @@ function updateUI(){
  $("phase").textContent=finished?"MATCH FINISHED":
   suddenDeath?"⚡ SUDDEN DEATH":"MATCHDAY STADIUM · KICK "+(myKicks+1)+" OF 10";
  $("kickBtn").disabled=busy||finished;
+ $("introMatchup").textContent = $("myTeam").value + " vs " + $("opTeam").value;
  renderPlayers();
 }
 
@@ -428,6 +532,7 @@ function setMessage(text){ $("message").textContent=text; }
 function finishMatch(text){
  finished=true;
  busy=false;
+ playSound('whistle');
  setMessage(text+" Final score: "+myScore+" - "+opScore);
  updateUI();
 }
@@ -440,9 +545,11 @@ function finishPlayerShot(){
   setMessage("❌ MISS! The curling shot went wide.");
  }else if(result.saved){
   saves++;
+  playSound('save');
   setMessage("🧤 SAVED! Brilliant reflex save by the keeper.");
  }else{
   myScore++;
+  playSound('goal');
   setMessage("⚽ GOAL! Exceptional strike into the top corner!");
  }
 
@@ -463,9 +570,11 @@ function opponentKick(){
 
  if(goal){
   opScore++;
+  playSound('goal');
   setMessage("⚽ "+name+" scores for the opponent.");
  }else{
   saves++;
+  playSound('save');
   setMessage("🧤 Brilliant penalty save! Opponent misses.");
  }
 
@@ -524,6 +633,7 @@ function takePenalty(){
  shotDuration=920-(power*3.5);
  shotStart=performance.now();
 
+ playSound('whistle');
  aimMarker.position.set(aim.x,aim.y,-11.85);
  setMessage(currentPlayer()+" takes a fierce shot!");
 }
@@ -553,6 +663,13 @@ function newMatch(){
  updateUI();
  setMessage("New Matchday fixture started. Choose your aim.");
 }
+
+$("enterMatchBtn").addEventListener("click",()=>{
+ initAudio();
+ playAmbientMusic();
+ playSound('whistle');
+ $("introOverlay").classList.add("fade-out");
+});
 
 $("kickBtn").addEventListener("click",takePenalty);
 $("resetBtn").addEventListener("click",newMatch);
