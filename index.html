@@ -24,19 +24,22 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
 @media (pointer:coarse){#tc{display:block}#hint{display:none}}
 #stick{position:fixed;left:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:120px;height:120px;border-radius:50%;background:#ffffff1a;border:2px solid #ffffff44}
 #knob{position:absolute;left:40px;top:40px;width:40px;height:40px;border-radius:50%;background:#ffffffaa}
-.tb{position:fixed;width:64px;height:64px;border-radius:50%;background:#ffffff26;border:2px solid #ffffff55;color:#fff;display:flex;align-items:center;justify-content:center;font:800 15px 'Barlow Condensed',sans-serif}
+.tb{position:fixed;width:54px;height:54px;border-radius:50%;background:#ffffff26;border:2px solid #ffffff55;color:#fff;display:flex;align-items:center;justify-content:center;font:800 15px 'Barlow Condensed',sans-serif}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="sb"><span class="h">BLU 0</span><span class="t" id="clk">0'</span><span class="a">0 RED</span></div>
 <button id="mute">Sound on</button>
-<div id="chg"><i></i></div><div id="hint">WASD move &nbsp; Shift sprint &nbsp; Space hold + release shoot &nbsp; E pass &nbsp; Q switch player</div>
+<div id="chg"><i></i></div><div id="hint">Arrow keys move &nbsp; Shift sprint &nbsp; Space ground shot &nbsp; W power shot &nbsp; E ground pass &nbsp; F lofted pass &nbsp; G through pass &nbsp; Q switch</div>
 <div id="bn"><h1></h1><p></p></div>
 <div id="menu"><h1>FLOODLIGHT<br><em>FC</em></h1><p>Six-a-side night match. Blue Harbor v Red Ember under the lights.</p><button id="go">Kick off</button></div>
 <div id="tc"><div id="stick"><div id="knob"></div></div>
-<div class="tb" id="bS" style="right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 90px)">SHOOT</div>
-<div class="tb" id="bP" style="right:96px;bottom:calc(env(safe-area-inset-bottom,0px) + 30px)">PASS</div>
+<div class="tb" id="bS" style="right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px)">SHOOT</div>
+<div class="tb" id="bW" style="right:76px;bottom:calc(env(safe-area-inset-bottom,0px) + 140px)">POWER</div>
+<div class="tb" id="bL" style="right:138px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px)">LOB</div>
+<div class="tb" id="bT" style="right:138px;bottom:calc(env(safe-area-inset-bottom,0px) + 156px)">THRU</div>
+<div class="tb" id="bP" style="right:76px;bottom:calc(env(safe-area-inset-bottom,0px) + 70px)">PASS</div>
 <div class="tb" id="bR" style="right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:56px;height:56px;display:none"></div>
-<div class="tb" id="bX" style="right:100px;bottom:calc(env(safe-area-inset-bottom,0px) + 110px);width:52px;height:52px">RUN</div></div>
+<div class="tb" id="bX" style="right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 160px)">RUN</div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const $=id=>document.getElementById(id),T=THREE,PI=Math.PI,L=50,W=32,GW=3.65,cl=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -83,13 +86,20 @@ const ring=new T.Mesh(new T.RingGeometry(.75,.95,28),new T.MeshBasicMaterial({co
 const bm=new T.Mesh(new T.SphereGeometry(.3,16,12),new T.MeshStandardMaterial({color:0xffffff,roughness:.5}));bm.castShadow=true;S.add(bm);
 const b={x:0,y:.3,z:0,vx:0,vy:0,vz:0,cd:0,owner:null};
 // state
-let state='menu',score=[0,0],clock=0,gt=0,slow=1,rdt=0,menuT=0,introT=0,user=P[4],cx=0,hold=0,charge=0,inx=0,inz=0,c=null,cd=9,ch=[null,null];
+let state='menu',score=[0,0],clock=0,gt=0,slow=1,rdt=0,menuT=0,introT=0,user=P[4],cx=0,hold=0,smode='g',charge=0,inx=0,inz=0,c=null,cd=9,ch=[null,null];
 function reset(t){P.forEach(p=>{p.x=p.hx;p.z=p.hz;p.vx=p.vz=0});const k=P[t*6+4];k.x=t?1.5:-1.5;k.z=0;Object.assign(b,{x:0,y:.3,z:0,vx:0,vy:0,vz:0,cd:.2,owner:null});if(!t)user=k}
 function banner(h,p){const e=$('bn');e.style.display=h?'flex':'none';e.children[0].textContent=h||'';e.children[1].textContent=p||''}
 function kick(p,dx,dz,pw,lift){const d=Math.hypot(dx,dz)||1;b.vx=dx/d*pw;b.vz=dz/d*pw;b.vy=lift;b.cd=.35;b.owner=null;snd('kick',pw/30)}
 function mate(p,fx,fz){let best=null,bs=.25;for(const q of P){if(q===p||q.t!==p.t||q.r==='G')continue;const dx=q.x-p.x,dz=q.z-p.z,d=Math.hypot(dx,dz);if(d<4||d>40)continue;const s=(dx*fx+dz*fz)/d-d*.004;if(s>bs){bs=s;best=q}}return best}
-function pass(p,fx,fz){const q=mate(p,fx,fz);let dx=fx,dz=fz;if(q){dx=q.x+q.vx*.6-p.x;dz=q.z+q.vz*.6-p.z}kick(p,dx,dz,cl(Math.hypot(dx,dz)*1.25+6,10,30),.8)}
+function pass(p,fx,fz,ty='g'){const dir=p.t?-1:1,q=mate(p,ty==='t'?dir:fx,ty==='t'?fz*.5:fz);let tx=p.x+fx*10,tz=p.z+fz*10;
+if(q){tx=q.x+q.vx*.6;tz=q.z+q.vz*.6;if(ty==='t'){tx=q.x+q.vx*1.2+dir*8;tz=q.z+q.vz*1.2}}
+tx=cl(tx,-L+2,L-2);tz=cl(tz,-W+2,W-2);const dx=tx-p.x,dz=tz-p.z,d=Math.hypot(dx,dz);
+if(q&&ty!=='g')q.tg={x:tx,z:tz,t:1.8};
+if(ty==='l'){const vy=cl(d*.3,6,14);kick(p,dx,dz,cl(d/(2*vy/25)*.95,8,34),vy)}
+else if(ty==='t')kick(p,dx,dz,cl(d*1.5+8,14,34),.25);
+else kick(p,dx,dz,cl(d*1.25+6,10,30),.25)}
 function ai(p,dt){const t=p.t,dir=t?-1:1;let tx=p.hx,tz=p.hz,sp=5.6;const has=c===p&&cd<1.25;
+if(p.tg){if(has||p.tg.t<=0||p.r==='G')p.tg=null;else{p.tg.t-=dt;return[p.tg.x,p.tg.z,8]}}
 if(p.r==='G'){const og=-dir*(L-2.5);tx=og;tz=cl(b.z*.4,-GW,GW);sp=7.5;const tt=(og-b.x)/(b.vx||1e-6);
 if(tt>0&&tt<1.3&&Math.abs(b.vx)>6){tz=cl(b.z+b.vz*tt,-GW-1,GW+1);sp=9.5}
 if(Math.abs(b.x-og)<13&&Math.abs(b.z)<14&&Math.abs(b.vx)<4){tx=b.x;tz=b.z;sp=7}
@@ -97,7 +107,7 @@ if(has){p.dt+=dt;if(p.dt>.6){kick(p,dir*10,(Math.random()-.5)*14,22,6);p.dt=0}}}
 else if(ch[t]===p){tx=b.x+b.vx*.25;tz=b.z+b.vz*.25;sp=6.1;
 if(has){tx=dir*L;tz=p.z*.6;p.dt+=dt;const dg=Math.abs(L*dir-p.x);
 if(dg<24&&p.dt>.35){kick(p,dir*L-p.x,(Math.random()-.5)*5-p.z,24+Math.random()*4,1+Math.random()*2);p.dt=0}
-else if(p.dt>1.2){pass(p,dir,0);p.dt=0}}}
+else if(p.dt>1.2){pass(p,dir,0,Math.random()<.3?'t':'g');p.dt=0}}}
 else{const atk=b.owner&&b.owner.t===t;tx=cl(p.hx+b.x*.4+(atk?dir*9:0),-L+6,L-6);tz=p.hz+b.z*.25}
 return[tx,tz,sp]}
 function goal(t){score[t]++;state='goal';gt=0;slow=.35;snd('cheer');banner('GOAL!',TM[t].n+'  '+score[0]+' - '+score[1])}
@@ -140,16 +150,18 @@ cam.position.set(px,py,pz);cam.lookAt(state==='intro'?0:cx,0,4*(state==='intro'?
 // input
 const K={};let sprintBtn=0;const KS=()=>K.ShiftLeft||K.ShiftRight;let stickV={x:0,z:0};
 function sw(){if(state!=='play')return;let nh=null,m=99;for(const p of P)if(p.t===0&&p.r!=='G'&&p!==user&&p.bd<m){m=p.bd;nh=p}if(nh)user=nh}
-function release(){if(!hold)return;hold=0;if(state==='play'&&user.bd<1.8)kick(user,L-user.x,cl(inz*GW*1.2,-GW*.9,GW*.9)-user.z,15+charge*20,1+charge*5);charge=0}
-function doPass(){if(state!=='play'||user.bd>1.8)return;let fx=inx,fz=inz;if(!fx&&!fz){fx=Math.sin(user.face);fz=Math.cos(user.face)}pass(user,fx,fz)}
-addEventListener('keydown',e=>{if(e.repeat)return;K[e.code]=1;if(e.code==='Space'){hold=1;e.preventDefault()}if(e.code==='KeyE')doPass();if(e.code==='KeyQ')sw();if(e.code==='KeyM')mute()});
-addEventListener('keyup',e=>{K[e.code]=0;if(e.code==='Space')release()});
-function axes(){inx=(K.KeyD||K.ArrowRight?1:0)-(K.KeyA||K.ArrowLeft?1:0)+stickV.x;inz=(K.KeyS||K.ArrowDown?1:0)-(K.KeyW||K.ArrowUp?1:0)+stickV.z}
+function release(){if(!hold)return;hold=0;if(state==='play'&&user.bd<1.8){const dx=L-user.x,tz=cl(inz*GW*1.2,-GW*.9,GW*.9);
+if(smode==='p')kick(user,dx,tz-user.z+(Math.random()-.5)*(2+charge*4),24+charge*18,2+charge*4);else kick(user,dx,tz-user.z,14+charge*16,.25)}charge=0}
+function doPass(ty='g'){if(state!=='play'||user.bd>1.8)return;let fx=inx,fz=inz;if(!fx&&!fz){fx=Math.sin(user.face);fz=Math.cos(user.face)}pass(user,fx,fz,ty)}
+addEventListener('keydown',e=>{if(e.repeat)return;K[e.code]=1;if(e.code==='Space'){e.preventDefault();if(!hold){hold=1;smode='g'}}if(e.code==='KeyW'&&!hold){hold=1;smode='p'}if(e.code==='KeyE')doPass('g');if(e.code==='KeyF')doPass('l');if(e.code==='KeyG')doPass('t');if(e.code==='KeyQ')sw();if(e.code==='KeyM')mute()});
+addEventListener('keyup',e=>{K[e.code]=0;if((e.code==='Space'&&smode==='g')||(e.code==='KeyW'&&smode==='p'))release()});
+function axes(){inx=(K.ArrowRight?1:0)-(K.ArrowLeft?1:0)+stickV.x;inz=(K.ArrowDown?1:0)-(K.ArrowUp?1:0)+stickV.z}
 const st=$('stick');let sid=null;
 function sm(e){const r=st.getBoundingClientRect(),dx=e.clientX-r.left-60,dz=e.clientY-r.top-60,l=Math.max(1,Math.hypot(dx,dz)/50);stickV={x:dx/50/l,z:dz/50/l};$('knob').style.transform=`translate(${stickV.x*40}px,${stickV.z*40}px)`}
 st.addEventListener('pointerdown',e=>{sid=e.pointerId;st.setPointerCapture(sid);sm(e)});st.addEventListener('pointermove',e=>{if(e.pointerId===sid)sm(e)});
 st.addEventListener('pointerup',()=>{sid=null;stickV={x:0,z:0};$('knob').style.transform=''});
-$('bS').addEventListener('pointerdown',()=>hold=1);$('bS').addEventListener('pointerup',release);$('bP').addEventListener('pointerdown',doPass);
+const tb=(id,dn,up)=>{$(id).addEventListener('pointerdown',dn);if(up)$(id).addEventListener('pointerup',up)};
+tb('bS',()=>{if(!hold){hold=1;smode='g'}},release);tb('bW',()=>{if(!hold){hold=1;smode='p'}},release);tb('bP',()=>doPass('g'));tb('bL',()=>doPass('l'));tb('bT',()=>doPass('t'));
 $('bX').addEventListener('pointerdown',()=>sprintBtn=1);$('bX').addEventListener('pointerup',()=>sprintBtn=0);
 // audio: crowd bed, effects, and a small stadium beat
 let A,mst,cg_,nb,muted=0,step=0;
