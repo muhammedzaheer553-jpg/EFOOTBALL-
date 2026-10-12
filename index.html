@@ -1,95 +1,178 @@
-Build a realistic 3D football (soccer) game inspired by eFootball using
-Three.js (WebGL), JavaScript modules and the Web Audio API. Use a multi-file
-project (index.html, /src, /assets, /data) with clean modules: GameEngine,
-Renderer, Physics, AI, UI, AudioManager, MatchManager, SaveSystem, TeamDatabase.
-Target 60 FPS on desktop and mobile with graphics quality settings.
-
-=== ACTION CONTROLS (eFootball style) ===
-Every action must have separate ball physics, animation and sound.
-Keyboard / Gamepad (Xbox or PlayStation) / Touch buttons:
-- Ground pass (short pass): low, fast, accurate. Power scales with button hold.
-- Lofted pass (up pass): ball goes up and lands near the target teammate.
-  Long range, slower, can be headed.
-- Through pass: ball is played into space ahead of a running teammate,
-  aimed with the direction stick, receiver auto-runs onto it.
-- Lob through pass (lofted through ball) when the modifier is held.
-- Ground shot (low driven shot): low, hard, stays along the grass.
-- Power shot: hold to charge a power bar, high speed, higher chance of
-  skying the ball when overcharged or under pressure.
-- Finesse shot: curled shot toward the far post with side spin.
-- Lob shot (chip) over an advancing goalkeeper.
-- Headers and volleys when the ball is in the air near the player.
-- Modifiers: sprint, precision dribble (slow touch), skill moves
-  (step-over, roulette, flick), shield the ball, slide tackle, jockey,
-  switch player, call for a pass.
-- Shot and pass accuracy depend on player stats, angle, pressure, stamina,
-  weak foot, and how well the ball was controlled.
-- Show an aim indicator and a power bar. Add camera shake and motion blur on
-  power shots and a short slow-motion on goals.
-- Include a button-mapping screen and a controls tutorial in training mode.
-
-=== TEAMS, LEAGUES AND PLAYERS (data-driven) ===
-- Do NOT hard-code teams. Load everything from JSON/CSV files in /data:
-  leagues.json, teams.json, players.json, kits.json, stadiums.json.
-- Leagues: Premier League, La Liga, Serie A, Bundesliga, Ligue 1, plus
-  national teams (all major countries) with confederation groupings.
-- Each team: name, short name, league, country, kit colours (home, away,
-  third), stadium, formation, tactics, and a squad of 18+ players.
-- Each player: name, age, nationality, position(s), preferred foot, weak foot,
-  height, weight, overall rating, and attributes: pace, acceleration,
-  finishing, shot power, long shots, short passing, long passing, vision,
-  dribbling, ball control, defending, tackling, strength, stamina, heading,
-  goalkeeping (diving, handling, reflexes), plus playstyles.
-- Procedural player models that use each player's height, build, skin tone and
-  hairstyle. Support optional face and badge image slots per player and team.
-- Squad management: starting XI, bench, formations, set-piece takers,
-  captain, and substitutions. Players tire and get injured.
-- In-game Edit Mode: edit any team, player, kit, stat and badge. Import and
-  export rosters as JSON/CSV so rosters can be updated when transfers happen.
-- Ship with a small sample dataset in the same format, so the game works out
-  of the box. Make loading a bigger dataset a matter of replacing the files.
-- Modes using these teams: Quick Match, League (full season with table and
-  fixtures), Cup, Champions-style tournament, International tournament,
-  and a Master League / Career mode with transfers and finances.
-
-=== REALISTIC PRESENTATION ===
-- PBR materials, dynamic shadows, bloom, ambient occlusion, weather
-  (day, sunset, night, rain), floodlights and wet pitch effects.
-- Skeletal-animated players (run, sprint, dribble, pass, shoot, header,
-  volley, tackle, slide, fall, celebrate) with motion blending.
-- Broadcast cameras (Wide, Tele, Stadium, Pro, Player cam) and goal replays.
-- Cinematic intro: stadium flyover, tunnel walk-out, line-ups, handshakes,
-  anthem or team music, coin toss, kick-off.
-- Stadium customisation: pitch pattern, banners, tifo, crowd density, roof,
-  nets, ad boards, with a live-preview editor.
-- Broadcast overlays: scoreboard, goal banners, cards, substitutions, stats.
-
-=== AUDIO AND MUSIC ===
-- Dynamic crowd (chants, cheers, groans, boos), kick, net, post, tackle and
-  whistle sounds that change with shot and pass type and power.
-- Commentary system with context-aware lines (goal, save, near miss, foul)
-  in English, Hindi and Malayalam.
-- Menu music and in-game playlist, with volume mixer (Master, Music, SFX,
-  Commentary, Crowd).
-
-=== GAMEPLAY AND AI ===
-- 11v11 with offside, fouls, cards, advantage, penalties, free kicks with
-  wall and curve, corners, throw-ins, goal kicks, half-time, extra time
-  and penalty shoot-outs.
-- AI with 5 difficulty levels. Teams play to their real-life style
-  (possession, counter-attack, high press) based on the tactics in the data.
-- Goalkeeper AI that dives, parries, and reads shot type (ground, power,
-  finesse, lob).
-- Settings: controls remapping, graphics, audio, camera, difficulty,
-  match length, language. Save/load via IndexedDB.
-
-=== LEGAL NOTE FOR THE CODE ===
-Keep real names, badges and likenesses only in the editable /data files, never
-hard-coded in the source, so they can be removed or replaced with fictional
-data before the game is published or sold.
-
-Build in phases and test each one: (1) engine, pitch, ball physics, one
-player; (2) the full pass and shot control system above; (3) database loading
-and team/player stats; (4) AI and rules; (5) stadium, weather, crowd;
-(6) cinematic intros, replays, UI; (7) audio, music, commentary;
-(8) league, cup, and career modes; (9) edit mode and polish.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Floodlight FC</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050b16;--ink:#eaf2ff;--home:#2f7bff;--away:#ff5a3c;--gold:#ffd24a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{height:100%;margin:0;background:var(--bg);color:var(--ink);overflow:hidden;font-family:'Barlow Condensed','Arial Narrow',sans-serif;touch-action:none;user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+#sb{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);display:flex;font-weight:800;font-size:24px;border-radius:6px;overflow:hidden;background:#0a1626ee;white-space:nowrap}
+#sb span{padding:4px 12px}#sb .h{background:var(--home)}#sb .a{background:var(--away)}#sb .t{color:var(--gold);min-width:44px;text-align:center}
+#chg{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);left:50%;transform:translateX(-50%);width:200px;height:8px;background:#ffffff22;border-radius:4px;overflow:hidden}
+#chg i{display:block;height:100%;width:0;background:var(--gold)}
+#hint{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 28px);width:100%;text-align:center;font-size:15px;opacity:.7;pointer-events:none}
+#bn{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;text-align:center;text-shadow:0 4px 24px #000}
+#bn h1{margin:0;font-size:min(16vw,120px);font-weight:800;line-height:.9}#bn p{margin:8px 0 0;font-size:24px;color:var(--gold)}
+#menu{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(ellipse at 50% 120%,#0b2a52cc,#050b16ee 70%);padding:20px}
+#menu h1{margin:0;font-size:min(20vw,170px);font-weight:800;line-height:.82;letter-spacing:-.01em}
+#menu h1 em{font-style:normal;color:var(--gold)}
+#menu p{max-width:420px;font-size:19px;opacity:.8;margin:14px 0}
+button{font:800 24px 'Barlow Condensed',sans-serif;background:var(--gold);color:#07121f;border:0;border-radius:6px;padding:10px 34px;cursor:pointer}
+button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+#mute{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;font-size:16px;padding:6px 12px;background:#ffffff22;color:var(--ink)}
+#tc{display:none}
+@media (pointer:coarse){#tc{display:block}#hint{display:none}}
+#stick{position:fixed;left:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:120px;height:120px;border-radius:50%;background:#ffffff1a;border:2px solid #ffffff44}
+#knob{position:absolute;left:40px;top:40px;width:40px;height:40px;border-radius:50%;background:#ffffffaa}
+.tb{position:fixed;width:64px;height:64px;border-radius:50%;background:#ffffff26;border:2px solid #ffffff55;color:#fff;display:flex;align-items:center;justify-content:center;font:800 15px 'Barlow Condensed',sans-serif}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="sb"><span class="h">BLU 0</span><span class="t" id="clk">0'</span><span class="a">0 RED</span></div>
+<button id="mute">Sound on</button>
+<div id="chg"><i></i></div><div id="hint">WASD move &nbsp; Shift sprint &nbsp; Space hold + release shoot &nbsp; E pass &nbsp; Q switch player</div>
+<div id="bn"><h1></h1><p></p></div>
+<div id="menu"><h1>FLOODLIGHT<br><em>FC</em></h1><p>Six-a-side night match. Blue Harbor v Red Ember under the lights.</p><button id="go">Kick off</button></div>
+<div id="tc"><div id="stick"><div id="knob"></div></div>
+<div class="tb" id="bS" style="right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 90px)">SHOOT</div>
+<div class="tb" id="bP" style="right:96px;bottom:calc(env(safe-area-inset-bottom,0px) + 30px)">PASS</div>
+<div class="tb" id="bR" style="right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:56px;height:56px;display:none"></div>
+<div class="tb" id="bX" style="right:100px;bottom:calc(env(safe-area-inset-bottom,0px) + 110px);width:52px;height:52px">RUN</div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=id=>document.getElementById(id),T=THREE,PI=Math.PI,L=50,W=32,GW=3.65,cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+const TM=[{n:'BLUE HARBOR',c:0x2f7bff},{n:'RED EMBER',c:0xff5a3c}];
+const R=new T.WebGLRenderer({canvas:$('c'),antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));R.shadowMap.enabled=true;
+const S=new T.Scene();S.background=new T.Color(0x050b16);S.fog=new T.Fog(0x050b16,70,170);
+const cam=new T.PerspectiveCamera(45,1,.1,300);
+function rs(){R.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.fov=cam.aspect<1?72:45;cam.updateProjectionMatrix()}addEventListener('resize',rs);rs();
+S.add(new T.HemisphereLight(0xa8c4ff,0x0a2a12,.6));
+const sun=new T.DirectionalLight(0xfff2dd,.95);sun.position.set(30,80,40);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-75,right:75,top:60,bottom:-60,far:220});S.add(sun);
+// pitch
+const cv=document.createElement('canvas');cv.width=1024;cv.height=656;const g=cv.getContext('2d'),k=10.24,X=x=>(x+L)*k,Z=z=>(z+W)*k;
+for(let i=0;i<10;i++){g.fillStyle=i%2?'#1d7433':'#278a3e';g.fillRect(i*k*10,0,k*10+1,656)}
+g.strokeStyle='#ffffffcc';g.lineWidth=3;g.strokeRect(2,2,1020,652);g.beginPath();g.moveTo(X(0),0);g.lineTo(X(0),656);g.stroke();
+g.beginPath();g.arc(X(0),Z(0),8*k,0,7);g.stroke();
+[-1,1].forEach(s=>{const bx=(d,h)=>g.strokeRect(s>0?X(L-d):X(-L),Z(-h),d*k,2*h*k);bx(16,17);bx(5.5,8)});
+const pt=new T.CanvasTexture(cv);pt.anisotropy=8;
+const pitch=new T.Mesh(new T.PlaneGeometry(100,64),new T.MeshStandardMaterial({map:pt,roughness:.95}));pitch.rotation.x=-PI/2;pitch.receiveShadow=true;S.add(pitch);
+const out=new T.Mesh(new T.PlaneGeometry(300,240),new T.MeshStandardMaterial({color:0x0b2f17}));out.rotation.x=-PI/2;out.position.y=-.03;S.add(out);
+// stands + crowd
+const pal=[0xffffff,0x2f7bff,0xff5a3c,0xffd24a,0x888fa0,0x39d98a];const cp=[],cc=[];
+function stand(ry,d,len){const gr=new T.Group();gr.rotation.y=ry;const a=Math.atan2(10,12),m=new T.Mesh(new T.BoxGeometry(len,.6,Math.hypot(12,10)),new T.MeshStandardMaterial({color:0x151d2e}));
+m.position.set(0,5.5,d+6);m.rotation.x=-a;gr.add(m);S.add(gr);gr.updateMatrixWorld();
+for(let i=0;i<1100;i++){const t=Math.random(),v=new T.Vector3((Math.random()-.5)*len,1+t*10+.5,d+t*12-.3).applyMatrix4(gr.matrixWorld);cp.push(v.x,v.y,v.z);const c=new T.Color(pal[Math.random()*6|0]);cc.push(c.r,c.g,c.b)}}
+stand(0,W+4,130);stand(PI,W+4,130);stand(PI/2,L+6,90);stand(-PI/2,L+6,90);
+const cg=new T.BufferGeometry();cg.setAttribute('position',new T.Float32BufferAttribute(cp,3));cg.setAttribute('color',new T.Float32BufferAttribute(cc,3));
+const crowd=new T.Points(cg,new T.PointsMaterial({size:.55,vertexColors:true}));S.add(crowd);
+[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>{const p=new T.Mesh(new T.CylinderGeometry(.4,.5,34),new T.MeshStandardMaterial({color:0x333a4a}));p.position.set(a*66,17,b*44);S.add(p);
+const h=new T.Mesh(new T.BoxGeometry(6,2.4,1),new T.MeshBasicMaterial({color:0xfffbe8}));h.position.set(a*66,35,b*44);h.lookAt(0,0,0);S.add(h)});
+// goals
+const wm=new T.MeshStandardMaterial({color:0xffffff});
+[-1,1].forEach(s=>{const x=s*L;[-GW,GW].forEach(z=>{const p=new T.Mesh(new T.CylinderGeometry(.1,.1,2.44),wm);p.position.set(x,1.22,z);p.castShadow=true;S.add(p)});
+const bar=new T.Mesh(new T.CylinderGeometry(.1,.1,2*GW),wm);bar.rotation.x=PI/2;bar.position.set(x,2.44,0);S.add(bar);
+const n=new T.Mesh(new T.BoxGeometry(3,2.44,2*GW,6,4,12),new T.MeshBasicMaterial({color:0xffffff,wireframe:true,transparent:true,opacity:.22}));n.position.set(x+s*1.5,1.22,0);S.add(n)});
+// players
+function mk(col){const gr=new T.Group(),M=c=>new T.MeshStandardMaterial({color:c,roughness:.7});
+const add=(geo,c,x,y,z,par=gr)=>{const m=new T.Mesh(geo,M(c));m.position.set(x,y,z);m.castShadow=true;par.add(m);return m};
+add(new T.CylinderGeometry(.34,.3,.9,10),col,0,1.4,0);add(new T.SphereGeometry(.21,12,10),0xe0b090,0,2.05,0);add(new T.CylinderGeometry(.31,.31,.35,10),0x101827,0,.88,0);
+gr.legs=[-.14,.14].map(x=>{const p=new T.Group();p.position.set(x,.72,0);gr.add(p);add(new T.BoxGeometry(.18,.7,.2),0xf2f2f2,0,-.35,0,p);return p});S.add(gr);return gr}
+const FM=[[-47,0,'G'],[-32,-12,'D'],[-32,12,'D'],[-20,0,'M'],[-12,-10,'F'],[-12,10,'F']],P=[];
+TM.forEach((tm,t)=>FM.forEach(([x,z,r])=>{const hx=t?-x:x;P.push({t,r,hx,hz:z,x:hx,z,vx:0,vz:0,face:t?-PI/2:PI/2,ph:0,dt:0,bd:9,m:mk(r=='G'?(t?0xffd24a:0x39d98a):tm.c)})}));
+const ring=new T.Mesh(new T.RingGeometry(.75,.95,28),new T.MeshBasicMaterial({color:0xffd24a,side:2}));ring.rotation.x=-PI/2;S.add(ring);
+const bm=new T.Mesh(new T.SphereGeometry(.3,16,12),new T.MeshStandardMaterial({color:0xffffff,roughness:.5}));bm.castShadow=true;S.add(bm);
+const b={x:0,y:.3,z:0,vx:0,vy:0,vz:0,cd:0,owner:null};
+// state
+let state='menu',score=[0,0],clock=0,gt=0,slow=1,rdt=0,menuT=0,introT=0,user=P[4],cx=0,hold=0,charge=0,inx=0,inz=0,c=null,cd=9,ch=[null,null];
+function reset(t){P.forEach(p=>{p.x=p.hx;p.z=p.hz;p.vx=p.vz=0});const k=P[t*6+4];k.x=t?1.5:-1.5;k.z=0;Object.assign(b,{x:0,y:.3,z:0,vx:0,vy:0,vz:0,cd:.2,owner:null});if(!t)user=k}
+function banner(h,p){const e=$('bn');e.style.display=h?'flex':'none';e.children[0].textContent=h||'';e.children[1].textContent=p||''}
+function kick(p,dx,dz,pw,lift){const d=Math.hypot(dx,dz)||1;b.vx=dx/d*pw;b.vz=dz/d*pw;b.vy=lift;b.cd=.35;b.owner=null;snd('kick',pw/30)}
+function mate(p,fx,fz){let best=null,bs=.25;for(const q of P){if(q===p||q.t!==p.t||q.r==='G')continue;const dx=q.x-p.x,dz=q.z-p.z,d=Math.hypot(dx,dz);if(d<4||d>40)continue;const s=(dx*fx+dz*fz)/d-d*.004;if(s>bs){bs=s;best=q}}return best}
+function pass(p,fx,fz){const q=mate(p,fx,fz);let dx=fx,dz=fz;if(q){dx=q.x+q.vx*.6-p.x;dz=q.z+q.vz*.6-p.z}kick(p,dx,dz,cl(Math.hypot(dx,dz)*1.25+6,10,30),.8)}
+function ai(p,dt){const t=p.t,dir=t?-1:1;let tx=p.hx,tz=p.hz,sp=5.6;const has=c===p&&cd<1.25;
+if(p.r==='G'){const og=-dir*(L-2.5);tx=og;tz=cl(b.z*.4,-GW,GW);sp=7.5;const tt=(og-b.x)/(b.vx||1e-6);
+if(tt>0&&tt<1.3&&Math.abs(b.vx)>6){tz=cl(b.z+b.vz*tt,-GW-1,GW+1);sp=9.5}
+if(Math.abs(b.x-og)<13&&Math.abs(b.z)<14&&Math.abs(b.vx)<4){tx=b.x;tz=b.z;sp=7}
+if(has){p.dt+=dt;if(p.dt>.6){kick(p,dir*10,(Math.random()-.5)*14,22,6);p.dt=0}}}
+else if(ch[t]===p){tx=b.x+b.vx*.25;tz=b.z+b.vz*.25;sp=6.1;
+if(has){tx=dir*L;tz=p.z*.6;p.dt+=dt;const dg=Math.abs(L*dir-p.x);
+if(dg<24&&p.dt>.35){kick(p,dir*L-p.x,(Math.random()-.5)*5-p.z,24+Math.random()*4,1+Math.random()*2);p.dt=0}
+else if(p.dt>1.2){pass(p,dir,0);p.dt=0}}}
+else{const atk=b.owner&&b.owner.t===t;tx=cl(p.hx+b.x*.4+(atk?dir*9:0),-L+6,L-6);tz=p.hz+b.z*.25}
+return[tx,tz,sp]}
+function goal(t){score[t]++;state='goal';gt=0;slow=.35;snd('cheer');banner('GOAL!',TM[t].n+'  '+score[0]+' - '+score[1])}
+function update(dt){
+if(b.cd>0)b.cd-=dt;
+cd=9;c=null;for(const p of P){p.bd=Math.hypot(p.x-b.x,p.z-b.z);if(p.bd<cd){cd=p.bd;c=p}}
+ch=[null,null];for(let t=0;t<2;t++){let m=99;for(const p of P)if(p.t===t&&p.r!=='G'&&p!==user&&p.bd<m){m=p.bd;ch[t]=p}}
+if(state==='play'&&!hold){let nh=null,m=99;for(const p of P)if(p.t===0&&p.r!=='G'&&p.bd<m){m=p.bd;nh=p}if(nh&&user.bd>nh.bd+3)user=nh}
+const sprint=KS()||sprintBtn;
+for(const p of P){let ax,az,sp;
+if(p===user&&state==='play'){const l=Math.hypot(inx,inz);ax=l>1?inx/l:inx;az=l>1?inz/l:inz;sp=sprint?8.8:6.4;ax*=sp;az*=sp}
+else if(state==='play'||state==='goal'){const[tx,tz,s]=ai(p,dt);const dx=tx-p.x,dz=tz-p.z,d=Math.hypot(dx,dz);ax=d>.5?dx/d*s:0;az=d>.5?dz/d*s:0;if(state==='goal'){ax*=.3;az*=.3}}
+else{ax=az=0}
+const f=Math.min(1,dt*8);p.vx+=(ax-p.vx)*f;p.vz+=(az-p.vz)*f;p.x=cl(p.x+p.vx*dt,-L-1,L+1);p.z=cl(p.z+p.vz*dt,-W-1,W+1);
+const s=Math.hypot(p.vx,p.vz);if(s>.6)p.face=Math.atan2(p.vx,p.vz);p.ph+=s*dt*1.7;
+p.m.position.set(p.x,0,p.z);p.m.rotation.y=p.face;p.m.legs[0].rotation.x=Math.sin(p.ph)*.9*Math.min(1,s/4);p.m.legs[1].rotation.x=-Math.sin(p.ph)*.9*Math.min(1,s/4)}
+if(b.cd<=0&&cd<1.15&&b.y<(c.r==='G'?2:1)){const s=Math.hypot(c.vx,c.vz),fx=s>.5?c.vx/s:Math.sin(c.face),fz=s>.5?c.vz/s:Math.cos(c.face);
+b.vx=c.vx+(c.x+fx*.85-b.x)*12;b.vz=c.vz+(c.z+fz*.85-b.z)*12;b.vy=0;b.owner=c}
+// ball physics
+b.vy-=25*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;
+if(b.y<.3){b.y=.3;b.vy=b.vy<-2?-b.vy*.55:0}
+if(b.y<.32){const f=Math.exp(-1.1*dt);b.vx*=f;b.vz*=f}
+if(state==='play'){
+if(Math.abs(b.x)>L){if(Math.abs(b.z)<GW&&b.y<2.44)goal(b.x>0?0:1);else{const s=Math.sign(b.x);Object.assign(b,{x:s*(L-6),z:cl(b.z,-8,8),y:.3,vx:0,vy:0,vz:0,owner:null,cd:.4})}}
+else if(Math.abs(b.z)>W){b.z=Math.sign(b.z)*(W-1);b.vx=b.vy=b.vz=0;b.cd=.4}
+clock+=rdt;if(clock>=180){state='end';banner('FULL TIME',TM[0].n+'  '+score[0]+' - '+score[1]+'  '+TM[1].n);snd('whistle',1.2);setTimeout(()=>{$('go').textContent='Play again';$('menu').style.display='flex'},2200)}}
+else if(state==='goal'){b.x=cl(b.x,-L-2.8,L+2.8);if(Math.abs(b.x)>L)b.vx*=.9;gt+=rdt;if(gt>.9)slow=1;if(gt>2.8){reset(b.x>0?1:0);state='play';banner('');snd('whistle',.5)}}
+bm.position.set(b.x,b.y,b.z);bm.rotation.z-=b.vx*dt*3;bm.rotation.x+=b.vz*dt*3;
+ring.position.set(user.x,.05,user.z);
+if(hold)charge=Math.min(1,charge+rdt*1.2);$('chg').firstChild.style.width=charge*100+'%';
+const[sbH,sbT,sbA]=$('sb').children;sbH.textContent='BLU '+score[0];sbA.textContent=score[1]+' RED';sbT.textContent=Math.min(90,clock/2|0)+"'";
+if(cg_&&state==='play'){const near=Math.min(Math.abs(L-b.x),Math.abs(-L-b.x));cg_.gain.value=.1+(near<22?.12:0)}}
+function camUpdate(dt){let px,py,pz,lx=0,lz=0;
+const a=menuT*.12,ox=Math.sin(a)*78,oz=Math.cos(a)*78;
+if(state==='menu'){cam.position.set(ox,36,oz);cam.lookAt(0,0,0);return}
+const tx=cl(b.x*.85,-36,36);cx+=(tx-cx)*Math.min(1,dt*3);const ph=cam.aspect<1?1.5:1;
+px=cx;py=26*ph;pz=40*ph;
+if(state==='intro'){const k=Math.min(1,introT/4.2),e=k*k*(3-2*k);px=ox*(1-e)+px*e;py=36*(1-e)+py*e;pz=oz*(1-e)+pz*e}
+cam.position.set(px,py,pz);cam.lookAt(state==='intro'?0:cx,0,4*(state==='intro'?0:1))}
+// input
+const K={};let sprintBtn=0;const KS=()=>K.ShiftLeft||K.ShiftRight;let stickV={x:0,z:0};
+function sw(){if(state!=='play')return;let nh=null,m=99;for(const p of P)if(p.t===0&&p.r!=='G'&&p!==user&&p.bd<m){m=p.bd;nh=p}if(nh)user=nh}
+function release(){if(!hold)return;hold=0;if(state==='play'&&user.bd<1.8)kick(user,L-user.x,cl(inz*GW*1.2,-GW*.9,GW*.9)-user.z,15+charge*20,1+charge*5);charge=0}
+function doPass(){if(state!=='play'||user.bd>1.8)return;let fx=inx,fz=inz;if(!fx&&!fz){fx=Math.sin(user.face);fz=Math.cos(user.face)}pass(user,fx,fz)}
+addEventListener('keydown',e=>{if(e.repeat)return;K[e.code]=1;if(e.code==='Space'){hold=1;e.preventDefault()}if(e.code==='KeyE')doPass();if(e.code==='KeyQ')sw();if(e.code==='KeyM')mute()});
+addEventListener('keyup',e=>{K[e.code]=0;if(e.code==='Space')release()});
+function axes(){inx=(K.KeyD||K.ArrowRight?1:0)-(K.KeyA||K.ArrowLeft?1:0)+stickV.x;inz=(K.KeyS||K.ArrowDown?1:0)-(K.KeyW||K.ArrowUp?1:0)+stickV.z}
+const st=$('stick');let sid=null;
+function sm(e){const r=st.getBoundingClientRect(),dx=e.clientX-r.left-60,dz=e.clientY-r.top-60,l=Math.max(1,Math.hypot(dx,dz)/50);stickV={x:dx/50/l,z:dz/50/l};$('knob').style.transform=`translate(${stickV.x*40}px,${stickV.z*40}px)`}
+st.addEventListener('pointerdown',e=>{sid=e.pointerId;st.setPointerCapture(sid);sm(e)});st.addEventListener('pointermove',e=>{if(e.pointerId===sid)sm(e)});
+st.addEventListener('pointerup',()=>{sid=null;stickV={x:0,z:0};$('knob').style.transform=''});
+$('bS').addEventListener('pointerdown',()=>hold=1);$('bS').addEventListener('pointerup',release);$('bP').addEventListener('pointerdown',doPass);
+$('bX').addEventListener('pointerdown',()=>sprintBtn=1);$('bX').addEventListener('pointerup',()=>sprintBtn=0);
+// audio: crowd bed, effects, and a small stadium beat
+let A,mst,cg_,nb,muted=0,step=0;
+function audioInit(){if(A)return;A=new AudioContext();mst=A.createGain();mst.gain.value=.8;mst.connect(A.destination);
+nb=A.createBuffer(1,A.sampleRate*2,A.sampleRate);const d=nb.getChannelData(0);let l=0;for(let i=0;i<d.length;i++){l=l*.97+(Math.random()*2-1)*.1;d[i]=l*3}
+const s=A.createBufferSource();s.buffer=nb;s.loop=true;const f=A.createBiquadFilter();f.type='lowpass';f.frequency.value=900;cg_=A.createGain();cg_.gain.value=.1;s.connect(f);f.connect(cg_);cg_.connect(mst);s.start();
+const bass=[55,55,82.4,73.4,55,55,98,82.4];setInterval(()=>{if(muted||state==='goal')return;const t=A.currentTime,n=step++%8;
+const o=A.createOscillator(),g2=A.createGain(),fl=A.createBiquadFilter();o.type='sawtooth';o.frequency.value=bass[n];fl.type='lowpass';fl.frequency.value=380;
+g2.gain.setValueAtTime(.07,t);g2.gain.exponentialRampToValueAtTime(.001,t+.25);o.connect(fl);fl.connect(g2);g2.connect(mst);o.start(t);o.stop(t+.27);
+if(n%2===0){const k2=A.createOscillator(),kg=A.createGain();k2.frequency.setValueAtTime(130,t);k2.frequency.exponentialRampToValueAtTime(40,t+.15);kg.gain.setValueAtTime(.2,t);kg.gain.exponentialRampToValueAtTime(.001,t+.18);k2.connect(kg);kg.connect(mst);k2.start(t);k2.stop(t+.2)}},230)}
+function snd(type,v=1){if(!A||muted)return;const t=A.currentTime;
+if(type==='whistle'){const o=A.createOscillator(),l=A.createOscillator(),lg=A.createGain(),g2=A.createGain();o.frequency.value=2900;l.frequency.value=32;lg.gain.value=90;l.connect(lg);lg.connect(o.frequency);
+g2.gain.setValueAtTime(.18,t);g2.gain.linearRampToValueAtTime(0,t+.5*v+.3);o.connect(g2);g2.connect(mst);o.start(t);l.start(t);o.stop(t+1.2);l.stop(t+1.2);return}
+const s=A.createBufferSource();s.buffer=nb;const f=A.createBiquadFilter(),g2=A.createGain();f.type='bandpass';
+if(type==='kick'){f.frequency.value=220;g2.gain.setValueAtTime(.7*Math.min(1,v+.2),t);g2.gain.exponentialRampToValueAtTime(.001,t+.12);s.connect(f);f.connect(g2);g2.connect(mst);s.start(t,Math.random());s.stop(t+.15)}
+else{f.frequency.value=800;g2.gain.setValueAtTime(.01,t);g2.gain.linearRampToValueAtTime(.6,t+.5);g2.gain.exponentialRampToValueAtTime(.001,t+3);s.connect(f);f.connect(g2);g2.connect(mst);s.start(t);s.stop(t+3.2)}}
+function mute(){muted=!muted;if(mst)mst.gain.value=muted?0:.8;$('mute').textContent=muted?'Sound off':'Sound on'}
+$('mute').onclick=mute;
+$('go').onclick=()=>{audioInit();score=[0,0];clock=0;slow=1;reset(0);state='intro';introT=0;$('menu').style.display='none';
+banner('BLUE HARBOR  v  RED EMBER','Floodlight Arena, live under the lights')};
+reset(0);let last=performance.now();
+function loop(now){rdt=Math.min(.05,(now-last)/1000);last=now;const dt=rdt*slow;menuT+=rdt;axes();
+if(state==='intro'){introT+=rdt;if(introT>4.6){state='play';banner('');snd('whistle')}}
+if(state!=='menu')update(dt);camUpdate(rdt);R.render(S,cam);requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script></body></html>
