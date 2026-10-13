@@ -28,17 +28,17 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="sb"><span class="h">BLU 0</span><span class="t" id="clk">0'</span><span class="a">0 RED</span></div>
-<button id="mute">Sound on</button>
-<div id="chg"><i></i></div><div id="hint">Arrow keys move &nbsp; Shift sprint &nbsp; Space ground shot &nbsp; W power shot &nbsp; E ground pass &nbsp; F lofted pass &nbsp; G through pass &nbsp; Q switch</div>
+<button id="mute">Sound on</button><button id="mus" style="position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:110px;font-size:16px;padding:6px 12px;background:#ffffff22;color:var(--ink)">Music on</button>
+<div id="chg"><i></i></div><div id="hint">Arrow keys move &nbsp; Shift sprint &nbsp; Space ground shot &nbsp; W power shot &nbsp; B curl shot &nbsp; E ground pass &nbsp; F lofted pass &nbsp; G through pass &nbsp; Q switch</div>
 <div id="bn"><h1></h1><p></p></div>
-<div id="menu"><h1>FLOODLIGHT<br><em>FC</em></h1><p>Six-a-side night match. Blue Harbor v Red Ember under the lights.</p><button id="go">Kick off</button></div>
+<div id="menu"><h1>FLOODLIGHT<br><em>FC</em></h1><p>Six-a-side night match. Blue Harbor v Red Ember under the lights.</p><button id="go">Kick off</button> <button id="onl" style="background:#2f7bff;color:#fff">Online 1v1</button><p id="ost"></p></div>
 <div id="tc"><div id="stick"><div id="knob"></div></div>
 <div class="tb" id="bS" style="right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px)">SHOOT</div>
 <div class="tb" id="bW" style="right:76px;bottom:calc(env(safe-area-inset-bottom,0px) + 140px)">POWER</div>
 <div class="tb" id="bL" style="right:138px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px)">LOB</div>
 <div class="tb" id="bT" style="right:138px;bottom:calc(env(safe-area-inset-bottom,0px) + 156px)">THRU</div>
 <div class="tb" id="bP" style="right:76px;bottom:calc(env(safe-area-inset-bottom,0px) + 70px)">PASS</div>
-<div class="tb" id="bR" style="right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:56px;height:56px;display:none"></div>
+<div class="tb" id="bC" style="right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px)">CURL</div>
 <div class="tb" id="bX" style="right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 160px)">RUN</div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -88,8 +88,8 @@ const b={x:0,y:.3,z:0,vx:0,vy:0,vz:0,cd:0,owner:null};
 // state
 let state='menu',score=[0,0],clock=0,gt=0,slow=1,rdt=0,menuT=0,introT=0,user=P[4],cx=0,hold=0,smode='g',charge=0,inx=0,inz=0,c=null,cd=9,ch=[null,null];
 function reset(t){P.forEach(p=>{p.x=p.hx;p.z=p.hz;p.vx=p.vz=0});const k=P[t*6+4];k.x=t?1.5:-1.5;k.z=0;Object.assign(b,{x:0,y:.3,z:0,vx:0,vy:0,vz:0,cd:.2,owner:null});if(!t)user=k}
-function banner(h,p){const e=$('bn');e.style.display=h?'flex':'none';e.children[0].textContent=h||'';e.children[1].textContent=p||''}
-function kick(p,dx,dz,pw,lift){const d=Math.hypot(dx,dz)||1;b.vx=dx/d*pw;b.vz=dz/d*pw;b.vy=lift;b.cd=.35;b.owner=null;snd('kick',pw/30)}
+function banner(h,p){bnTxt=h?h+'|'+(p||''):'';const e=$('bn');e.style.display=h?'flex':'none';e.children[0].textContent=h||'';e.children[1].textContent=p||''}
+function kick(p,dx,dz,pw,lift){const d=Math.hypot(dx,dz)||1;b.vx=dx/d*pw;b.vz=dz/d*pw;b.vy=lift;b.cd=.35;b.owner=null;b.curl=0;snd('kick',pw/30)}
 function mate(p,fx,fz){let best=null,bs=.25;for(const q of P){if(q===p||q.t!==p.t||q.r==='G')continue;const dx=q.x-p.x,dz=q.z-p.z,d=Math.hypot(dx,dz);if(d<4||d>40)continue;const s=(dx*fx+dz*fz)/d-d*.004;if(s>bs){bs=s;best=q}}return best}
 function pass(p,fx,fz,ty='g'){const dir=p.t?-1:1,q=mate(p,ty==='t'?dir:fx,ty==='t'?fz*.5:fz);let tx=p.x+fx*10,tz=p.z+fz*10;
 if(q){tx=q.x+q.vx*.6;tz=q.z+q.vz*.6;if(ty==='t'){tx=q.x+q.vx*1.2+dir*8;tz=q.z+q.vz*1.2}}
@@ -114,11 +114,13 @@ function goal(t){score[t]++;state='goal';gt=0;slow=.35;snd('cheer');banner('GOAL
 function update(dt){
 if(b.cd>0)b.cd-=dt;
 cd=9;c=null;for(const p of P){p.bd=Math.hypot(p.x-b.x,p.z-b.z);if(p.bd<cd){cd=p.bd;c=p}}
-ch=[null,null];for(let t=0;t<2;t++){let m=99;for(const p of P)if(p.t===t&&p.r!=='G'&&p!==user&&p.bd<m){m=p.bd;ch[t]=p}}
+if(online==='host'){let nh=null,m=99;for(const p of P)if(p.t===1&&p.r!=='G'&&p.bd<m){m=p.bd;nh=p}if(!user2||user2.bd>nh.bd+3)user2=nh}else user2=null;
+ch=[null,null];for(let t=0;t<2;t++){let m=99;for(const p of P)if(p.t===t&&p.r!=='G'&&p!==user&&p!==user2&&p.bd<m){m=p.bd;ch[t]=p}}
 if(state==='play'&&!hold){let nh=null,m=99;for(const p of P)if(p.t===0&&p.r!=='G'&&p.bd<m){m=p.bd;nh=p}if(nh&&user.bd>nh.bd+3)user=nh}
 const sprint=KS()||sprintBtn;
 for(const p of P){let ax,az,sp;
 if(p===user&&state==='play'){const l=Math.hypot(inx,inz);ax=l>1?inx/l:inx;az=l>1?inz/l:inz;sp=sprint?8.8:6.4;ax*=sp;az*=sp}
+else if(p===user2&&state==='play'){if(performance.now()-(R2.t||0)>600){R2.ix=R2.iz=0}const l=Math.hypot(R2.ix,R2.iz)||1,k2=Math.min(1,l),sp=R2.sp?8.8:6.4;ax=R2.ix/l*k2*sp;az=R2.iz/l*k2*sp}
 else if(state==='play'||state==='goal'){const[tx,tz,s]=ai(p,dt);const dx=tx-p.x,dz=tz-p.z,d=Math.hypot(dx,dz);ax=d>.5?dx/d*s:0;az=d>.5?dz/d*s:0;if(state==='goal'){ax*=.3;az*=.3}}
 else{ax=az=0}
 const f=Math.min(1,dt*8);p.vx+=(ax-p.vx)*f;p.vz+=(az-p.vz)*f;p.x=cl(p.x+p.vx*dt,-L-1,L+1);p.z=cl(p.z+p.vz*dt,-W-1,W+1);
@@ -127,6 +129,7 @@ p.m.position.set(p.x,0,p.z);p.m.rotation.y=p.face;p.m.legs[0].rotation.x=Math.si
 if(b.cd<=0&&cd<1.15&&b.y<(c.r==='G'?2:1)){const s=Math.hypot(c.vx,c.vz),fx=s>.5?c.vx/s:Math.sin(c.face),fz=s>.5?c.vz/s:Math.cos(c.face);
 b.vx=c.vx+(c.x+fx*.85-b.x)*12;b.vz=c.vz+(c.z+fz*.85-b.z)*12;b.vy=0;b.owner=c}
 // ball physics
+if(b.curl){const s=Math.hypot(b.vx,b.vz)||1,ax=-b.vz/s*b.curl,az=b.vx/s*b.curl;b.vx+=ax*dt;b.vz+=az*dt;b.curl*=Math.exp(-.5*dt);if(b.y<.32&&b.vy<1)b.curl=0}
 b.vy-=25*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;
 if(b.y<.3){b.y=.3;b.vy=b.vy<-2?-b.vy*.55:0}
 if(b.y<.32){const f=Math.exp(-1.1*dt);b.vx*=f;b.vz*=f}
@@ -146,45 +149,76 @@ if(state==='menu'){cam.position.set(ox,36,oz);cam.lookAt(0,0,0);return}
 const tx=cl(b.x*.85,-36,36);cx+=(tx-cx)*Math.min(1,dt*3);const ph=cam.aspect<1?1.5:1;
 px=cx;py=26*ph;pz=40*ph;
 if(state==='intro'){const k=Math.min(1,introT/4.2),e=k*k*(3-2*k);px=ox*(1-e)+px*e;py=36*(1-e)+py*e;pz=oz*(1-e)+pz*e}
-cam.position.set(px,py,pz);cam.lookAt(state==='intro'?0:cx,0,4*(state==='intro'?0:1))}
+const mr=online==='guest'?-1:1;cam.position.set(px*mr,py,pz*mr);cam.lookAt(state==='intro'?0:cx*mr,0,4*(state==='intro'?0:1)*mr)}
 // input
 const K={};let sprintBtn=0;const KS=()=>K.ShiftLeft||K.ShiftRight;let stickV={x:0,z:0};
 function sw(){if(state!=='play')return;let nh=null,m=99;for(const p of P)if(p.t===0&&p.r!=='G'&&p!==user&&p.bd<m){m=p.bd;nh=p}if(nh)user=nh}
-function release(){if(!hold)return;hold=0;if(state==='play'&&user.bd<1.8){const dx=L-user.x,tz=cl(inz*GW*1.2,-GW*.9,GW*.9);
-if(smode==='p')kick(user,dx,tz-user.z+(Math.random()-.5)*(2+charge*4),24+charge*18,2+charge*4);else kick(user,dx,tz-user.z,14+charge*16,.25)}charge=0}
-function doPass(ty='g'){if(state!=='play'||user.bd>1.8)return;let fx=inx,fz=inz;if(!fx&&!fz){fx=Math.sin(user.face);fz=Math.cos(user.face)}pass(user,fx,fz,ty)}
-addEventListener('keydown',e=>{if(e.repeat)return;K[e.code]=1;if(e.code==='Space'){e.preventDefault();if(!hold){hold=1;smode='g'}}if(e.code==='KeyW'&&!hold){hold=1;smode='p'}if(e.code==='KeyE')doPass('g');if(e.code==='KeyF')doPass('l');if(e.code==='KeyG')doPass('t');if(e.code==='KeyQ')sw();if(e.code==='KeyM')mute()});
-addEventListener('keyup',e=>{K[e.code]=0;if((e.code==='Space'&&smode==='g')||(e.code==='KeyW'&&smode==='p'))release()});
+function shot(p,m,ch,iz){const dr=p.t?-1:1,dx=dr*L-p.x,tz=cl(iz*GW*1.2,-GW*.9,GW*.9);if(m==='c'){const fp=p.z>0?-1:1;kick(p,dx,fp*(GW+3)-p.z,21+ch*10,2.5+ch*2);b.curl=-fp*dr*(7+ch*3);return}
+if(m==='p')kick(p,dx,tz-p.z+(Math.random()-.5)*(2+ch*4),24+ch*18,2+ch*4);else kick(p,dx,tz-p.z,14+ch*16,.25)}
+function release(){if(!hold)return;hold=0;if(state==='play'&&user.bd<1.8){if(online==='guest')net('in',{a:'s',m:smode,c:charge,iz:-inz});else shot(user,smode,charge,inz)}charge=0}
+function doPass(ty='g'){if(state!=='play'||user.bd>1.8)return;const g1=online==='guest'?-1:1;let fx=inx*g1,fz=inz*g1;if(!fx&&!fz){fx=Math.sin(user.face);fz=Math.cos(user.face)}if(online==='guest'){net('in',{a:ty,ix:fx,iz:fz});return}pass(user,fx,fz,ty)}
+addEventListener('keydown',e=>{if(e.repeat)return;K[e.code]=1;if(e.code==='Space'){e.preventDefault();if(!hold){hold=1;smode='g'}}if(e.code==='KeyW'&&!hold){hold=1;smode='p'}if(e.code==='KeyB'&&!hold){hold=1;smode='c'}if(e.code==='KeyN')$('mus').click();if(e.code==='KeyE')doPass('g');if(e.code==='KeyF')doPass('l');if(e.code==='KeyG')doPass('t');if(e.code==='KeyQ')sw();if(e.code==='KeyM')mute()});
+addEventListener('keyup',e=>{K[e.code]=0;if((e.code==='Space'&&smode==='g')||(e.code==='KeyW'&&smode==='p')||(e.code==='KeyB'&&smode==='c'))release()});
 function axes(){inx=(K.ArrowRight?1:0)-(K.ArrowLeft?1:0)+stickV.x;inz=(K.ArrowDown?1:0)-(K.ArrowUp?1:0)+stickV.z}
 const st=$('stick');let sid=null;
 function sm(e){const r=st.getBoundingClientRect(),dx=e.clientX-r.left-60,dz=e.clientY-r.top-60,l=Math.max(1,Math.hypot(dx,dz)/50);stickV={x:dx/50/l,z:dz/50/l};$('knob').style.transform=`translate(${stickV.x*40}px,${stickV.z*40}px)`}
 st.addEventListener('pointerdown',e=>{sid=e.pointerId;st.setPointerCapture(sid);sm(e)});st.addEventListener('pointermove',e=>{if(e.pointerId===sid)sm(e)});
 st.addEventListener('pointerup',()=>{sid=null;stickV={x:0,z:0};$('knob').style.transform=''});
 const tb=(id,dn,up)=>{$(id).addEventListener('pointerdown',dn);if(up)$(id).addEventListener('pointerup',up)};
-tb('bS',()=>{if(!hold){hold=1;smode='g'}},release);tb('bW',()=>{if(!hold){hold=1;smode='p'}},release);tb('bP',()=>doPass('g'));tb('bL',()=>doPass('l'));tb('bT',()=>doPass('t'));
+tb('bS',()=>{if(!hold){hold=1;smode='g'}},release);tb('bW',()=>{if(!hold){hold=1;smode='p'}},release);tb('bP',()=>doPass('g'));tb('bL',()=>doPass('l'));tb('bT',()=>doPass('t'));tb('bC',()=>{if(!hold){hold=1;smode='c'}},release);
 $('bX').addEventListener('pointerdown',()=>sprintBtn=1);$('bX').addEventListener('pointerup',()=>sprintBtn=0);
 // audio: crowd bed, effects, and a small stadium beat
-let A,mst,cg_,nb,muted=0,step=0;
-function audioInit(){if(A)return;A=new AudioContext();mst=A.createGain();mst.gain.value=.8;mst.connect(A.destination);
+let A,mst,cg_,nb,muted=0,step=0,musicOff=0,mg,online=null,room=null,sfx='',snap=null,R2={ix:0,iz:0,sp:0},user2=null,lastTx=0,seq=0,sq=0,bnc='',bnTxt='';
+function audioInit(){if(A){if(A.state!=='running')A.resume();return}A=new AudioContext();if(A.state!=='running')A.resume();mst=A.createGain();mst.gain.value=.8;mst.connect(A.destination);
 nb=A.createBuffer(1,A.sampleRate*2,A.sampleRate);const d=nb.getChannelData(0);let l=0;for(let i=0;i<d.length;i++){l=l*.97+(Math.random()*2-1)*.1;d[i]=l*3}
 const s=A.createBufferSource();s.buffer=nb;s.loop=true;const f=A.createBiquadFilter();f.type='lowpass';f.frequency.value=900;cg_=A.createGain();cg_.gain.value=.1;s.connect(f);f.connect(cg_);cg_.connect(mst);s.start();
-const bass=[55,55,82.4,73.4,55,55,98,82.4];setInterval(()=>{if(muted||state==='goal')return;const t=A.currentTime,n=step++%8;
+mg=A.createGain();mg.gain.value=.6;mg.connect(mst);setInterval(beat,230);const bass=[55,55,82.4,73.4,55,55,98,82.4];setInterval(()=>{if(1)return;const t=A.currentTime,n=step++%8;
 const o=A.createOscillator(),g2=A.createGain(),fl=A.createBiquadFilter();o.type='sawtooth';o.frequency.value=bass[n];fl.type='lowpass';fl.frequency.value=380;
 g2.gain.setValueAtTime(.07,t);g2.gain.exponentialRampToValueAtTime(.001,t+.25);o.connect(fl);fl.connect(g2);g2.connect(mst);o.start(t);o.stop(t+.27);
 if(n%2===0){const k2=A.createOscillator(),kg=A.createGain();k2.frequency.setValueAtTime(130,t);k2.frequency.exponentialRampToValueAtTime(40,t+.15);kg.gain.setValueAtTime(.2,t);kg.gain.exponentialRampToValueAtTime(.001,t+.18);k2.connect(kg);kg.connect(mst);k2.start(t);k2.stop(t+.2)}},230)}
-function snd(type,v=1){if(!A||muted)return;const t=A.currentTime;
+// music: bass, pad, arpeggio lead, kick, snare and hats over an Am-F-C-G loop
+const CH=[[57,60,64],[53,57,60],[60,64,67],[55,59,62]],mf=m=>440*2**((m-69)/12);
+function tone(t,fr,ty,v,d,lp){const o=A.createOscillator(),g2=A.createGain(),fl=A.createBiquadFilter();o.type=ty;o.frequency.value=fr;fl.type='lowpass';fl.frequency.value=lp;g2.gain.setValueAtTime(v,t);g2.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(fl);fl.connect(g2);g2.connect(mg);o.start(t);o.stop(t+d+.02)}
+function nz(t,fq,v,d){const s=A.createBufferSource();s.buffer=nb;const f=A.createBiquadFilter(),g2=A.createGain();f.type='highpass';f.frequency.value=fq;g2.gain.setValueAtTime(v,t);g2.gain.exponentialRampToValueAtTime(.001,t+d);s.connect(f);f.connect(g2);g2.connect(mg);s.start(t,Math.random());s.stop(t+d+.02)}
+function beat(){if(!A||musicOff||muted)return;const t=A.currentTime+.02,n=step++,i=n%8,ch=CH[(n>>3)%4],pat=[0,1,2,1,0,1,2,2];
+tone(t,mf(ch[0]-24),'sawtooth',.1,.3,420);tone(t,mf(ch[pat[i]]+12),'square',.035,.2,2200);
+if(i===0)ch.forEach(m=>tone(t,mf(m),'sine',.05,1.8,900));
+if(i%2===0){const k=A.createOscillator(),kg=A.createGain();k.frequency.setValueAtTime(140,t);k.frequency.exponentialRampToValueAtTime(40,t+.15);kg.gain.setValueAtTime(.3,t);kg.gain.exponentialRampToValueAtTime(.001,t+.2);k.connect(kg);kg.connect(mg);k.start(t);k.stop(t+.22)}
+if(i===2||i===6)nz(t,1200,.12,.12);nz(t,7000,.03,.04)}
+// online 1v1 through the artifact room: host runs the match, guest sends inputs and draws snapshots
+const net=(t,d)=>{try{room&&room.emit(t,d)}catch(e){}};
+function act(d){const p=user2;if(!p||state!=='play'||p.bd>1.8)return;if(d.a==='s')shot(p,d.m||'g',d.c||0,d.iz||0);else{let fx=d.ix,fz=d.iz;if(!fx&&!fz){fx=Math.sin(p.face);fz=Math.cos(p.face)}pass(p,fx,fz,d.a)}}
+async function goOnline(){const ost=$('ost');let r=null;try{r=await claude.use('room')}catch(e){}
+if(!r){ost.textContent='Online play needs the shared claude.ai link: both players signed in and invited to this artifact.';return}
+audioInit();room=r;ost.textContent='Waiting for an opponent to press Online 1v1...';
+r.on('in',m=>{if(online!=='host'||m.isMe)return;const d=m.data||{};if(d.a)act(d);else{R2.ix=d.ix||0;R2.iz=d.iz||0;R2.sp=d.sp||0;R2.t=performance.now()}});
+r.on('st',m=>{if(m.isMe||online==='host')return;if(online!=='guest'){online='guest';$('menu').style.display='none'}snap=m.data});
+r.presence({on:1});
+r.onPeers(ch=>{if(online)return;const o=ch.peers.filter(p=>!p.isMe&&p.presence&&p.presence.on),me=ch.peers.find(p=>p.isMe);if(!o.length||!me)return;if(me.peer<o[0].peer){$('go').onclick();online='host'}else ost.textContent='Opponent found, waiting for kick-off...'})}
+function netTick(now){if(!online||now-lastTx<50)return;lastTx=now;
+if(online==='guest')net('in',{ix:-inx,iz:-inz,sp:(KS()||sprintBtn)?1:0});
+else{const q=[];for(const p of P)q.push(Math.round(p.x*10),Math.round(p.z*10),Math.round(p.face*10));net('st',{p:q,b:[Math.round(b.x*10),Math.round(b.y*10),Math.round(b.z*10)],s:score,c:clock,st:state,bn:bnTxt,u2:P.indexOf(user2),sf:sfx,sq:++seq});sfx=''}}
+function gupdate(dt){const s=snap;if(!s)return;if(s.st==='intro'&&state!=='intro')introT=0;
+if(s.bn!==bnc){bnc=s.bn;const q=s.bn.split('|');banner(q[0],q[1])}
+state=s.st;score=s.s;clock=s.c;if(s.sf&&s.sq!==sq)snd(s.sf);sq=s.sq;const f=Math.min(1,dt*14);
+b.x+=(s.b[0]/10-b.x)*f;b.y+=(s.b[1]/10-b.y)*f;b.z+=(s.b[2]/10-b.z)*f;bm.position.set(b.x,b.y,b.z);
+P.forEach((p,i)=>{const nx=s.p[i*3]/10,nz=s.p[i*3+1]/10,dx=nx-p.x,dz=nz-p.z,mv=Math.hypot(dx,dz)*f/Math.max(dt,.001);p.x+=dx*f;p.z+=dz*f;p.face=s.p[i*3+2]/10;p.ph+=mv*dt*1.7;
+p.m.position.set(p.x,0,p.z);p.m.rotation.y=p.face;p.m.legs[0].rotation.x=Math.sin(p.ph)*.9*Math.min(1,mv/4);p.m.legs[1].rotation.x=-Math.sin(p.ph)*.9*Math.min(1,mv/4);p.bd=Math.hypot(p.x-b.x,p.z-b.z)});
+user=P[s.u2]||P[10];ring.position.set(user.x,.05,user.z);if(hold)charge=Math.min(1,charge+rdt*1.2);$('chg').firstChild.style.width=charge*100+'%';
+const[sbH,sbT,sbA]=$('sb').children;sbH.textContent='BLU '+score[0];sbA.textContent=score[1]+' RED';sbT.textContent=Math.min(90,clock/2|0)+"'"}
+function snd(type,v=1){if(online==='host')sfx=type;if(!A||muted)return;const t=A.currentTime;
 if(type==='whistle'){const o=A.createOscillator(),l=A.createOscillator(),lg=A.createGain(),g2=A.createGain();o.frequency.value=2900;l.frequency.value=32;lg.gain.value=90;l.connect(lg);lg.connect(o.frequency);
 g2.gain.setValueAtTime(.18,t);g2.gain.linearRampToValueAtTime(0,t+.5*v+.3);o.connect(g2);g2.connect(mst);o.start(t);l.start(t);o.stop(t+1.2);l.stop(t+1.2);return}
 const s=A.createBufferSource();s.buffer=nb;const f=A.createBiquadFilter(),g2=A.createGain();f.type='bandpass';
 if(type==='kick'){f.frequency.value=220;g2.gain.setValueAtTime(.7*Math.min(1,v+.2),t);g2.gain.exponentialRampToValueAtTime(.001,t+.12);s.connect(f);f.connect(g2);g2.connect(mst);s.start(t,Math.random());s.stop(t+.15)}
 else{f.frequency.value=800;g2.gain.setValueAtTime(.01,t);g2.gain.linearRampToValueAtTime(.6,t+.5);g2.gain.exponentialRampToValueAtTime(.001,t+3);s.connect(f);f.connect(g2);g2.connect(mst);s.start(t);s.stop(t+3.2)}}
 function mute(){muted=!muted;if(mst)mst.gain.value=muted?0:.8;$('mute').textContent=muted?'Sound off':'Sound on'}
-$('mute').onclick=mute;
-$('go').onclick=()=>{audioInit();score=[0,0];clock=0;slow=1;reset(0);state='intro';introT=0;$('menu').style.display='none';
+$('mute').onclick=mute;$('mus').onclick=()=>{musicOff=!musicOff;$('mus').textContent=musicOff?'Music off':'Music on'};$('onl').onclick=goOnline;['click','keydown','pointerup','touchend'].forEach(ev=>addEventListener(ev,()=>audioInit()));
+$('go').onclick=()=>{online=null;audioInit();score=[0,0];clock=0;slow=1;reset(0);state='intro';introT=0;$('menu').style.display='none';
 banner('BLUE HARBOR  v  RED EMBER','Floodlight Arena, live under the lights')};
 reset(0);let last=performance.now();
 function loop(now){rdt=Math.min(.05,(now-last)/1000);last=now;const dt=rdt*slow;menuT+=rdt;axes();
-if(state==='intro'){introT+=rdt;if(introT>4.6){state='play';banner('');snd('whistle')}}
-if(state!=='menu')update(dt);camUpdate(rdt);R.render(S,cam);requestAnimationFrame(loop)}
+if(state==='intro'){introT+=rdt;if(introT>4.6&&online!=='guest'){state='play';banner('');snd('whistle')}}
+if(online==='guest')gupdate(rdt);else if(state!=='menu')update(dt);camUpdate(rdt);netTick(now);R.render(S,cam);requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 </script></body></html>
